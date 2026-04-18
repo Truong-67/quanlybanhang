@@ -43,7 +43,12 @@ export default function App() {
     try {
       const res = await fetch('/api/data?action=getAll');
       const data = await res.json();
-
+      // 🔥 RESET TOÀN BỘ STATE (QUAN TRỌNG NHẤT)
+setDsGiaoDich([]);
+setDsNhap([]);
+setDsBan([]);
+setDsKhachHang([]);
+setDsNhaCungCap([]);
       const parseSheet = (sheet: any[]) => {
         if (!sheet || sheet.length <= 1) return [];
         const headers = sheet[0];
