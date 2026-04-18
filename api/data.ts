@@ -1,9 +1,10 @@
-import { readSheet, appendRow } from './sheets';
+import { readSheet, appendRow } from './sheets.js';
 
 export default async function handler(req: any, res: any) {
   try {
     const { action } = req.query;
 
+    // ================= GET =================
     if (req.method === 'GET') {
       if (action === 'getAll') {
         const [giaoDich, khachHang, nhaCungCap] = await Promise.all([
@@ -20,31 +21,35 @@ export default async function handler(req: any, res: any) {
       }
     }
 
+    // ================= POST =================
     if (req.method === 'POST') {
       if (action === 'addGiaoDich') {
         const { row } = req.body;
 
         if (!row || !Array.isArray(row)) {
-          return res.status(400).json({ error: 'Request body must contain a "row" array' });
+          return res.status(400).json({
+            error: 'Body phải có row dạng array',
+          });
         }
 
         await appendRow('GIAO_DICH', row);
-        
-        return res.status(200).json({ 
-          success: true, 
-          message: 'Thêm dòng thành công vào sheet GIAO_DICH' 
+
+        return res.status(200).json({
+          success: true,
+          message: 'Đã thêm giao dịch',
         });
       }
     }
 
-    // Nếu không khớp method hay action nào
-    return res.status(400).json({ error: 'Action hoặc Method không hợp lệ' });
+    return res.status(400).json({
+      error: 'Sai action hoặc method',
+    });
 
   } catch (error: any) {
-    console.error('API Error:', error);
-    return res.status(500).json({ 
-      error: error.message || 'Lỗi server nội bộ',
-      details: 'Vui lòng kiểm tra lại cấu hình hoặc dữ liệu đầu vào'
+    console.error('API ERROR:', error);
+
+    return res.status(500).json({
+      error: error.message || 'Internal Server Error',
     });
   }
 }
