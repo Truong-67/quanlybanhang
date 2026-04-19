@@ -18,12 +18,12 @@ export default function App() {
   const [dsKhachHang, setDsKhachHang] = useState<any[]>([]);
   const [dsNhaCungCap, setDsNhaCungCap] = useState<any[]>([]);
 
-  const [nhapMaHang, setNhapMaHang] = useState(hangHoa[0].MaHang);
+  const [nhapMaHang, setNhapMaHang] = useState('');
   const [nhapMaNCC, setNhapMaNCC] = useState('');
   const [nhapSoLuong, setNhapSoLuong] = useState('');
   const [nhapGia, setNhapGia] = useState('');
 
-  const [banMaHang, setBanMaHang] = useState(hangHoa[0].MaHang);
+  const [banMaHang, setBanMaHang] = useState('');
   const [banMaKH, setBanMaKH] = useState('');
   const [banSoLuong, setBanSoLuong] = useState('');
   const [banGia, setBanGia] = useState('');
