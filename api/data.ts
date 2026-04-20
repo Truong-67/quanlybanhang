@@ -15,6 +15,7 @@ export default async function handler(req: any, res: any) {
           readSheet('GIAO_DICH'),
           readSheet('KHACH_HANG'),
           readSheet('NHA_CUNG_CAP'),
+          readSheet('HANG_HOA') // 🔥 THÊM DÒNG NÀY
         ]);
 
         return res.status(200).json({
