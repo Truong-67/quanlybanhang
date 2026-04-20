@@ -128,32 +128,37 @@ if (data.hangHoa) {
       //inventoryService.nhapHang(dsNhap, { maHang: nhapMaHang, soLuong: Number(nhapSoLuong), maNCC: nhapMaNCC });
 
       const tenH = dsHangHoa.find(h => h.MaHang === nhapMaHang)?.TenHang || nhapMaHang;
-      const tenN = dsNhaCungCap.find(n => n.MaNCC === nhapMaNCC)?.TenNCC || nhapMaNCC;
-      
-      const newTransaction = {
-        id: Date.now().toString(),
-        type: 'NHAP',
-        maHang: nhapMaHang,
-        tenHang: tenH,
-        soLuong: Number(nhapSoLuong),
-        gia: Number(nhapGia),
-        doiTac: tenN,
-        thoiGian: new Date()
-      };
 
-      const row = [
-        newTransaction.id,
-        newTransaction.type,
-        newTransaction.maHang,
-        newTransaction.tenHang,
-        newTransaction.soLuong,
-        newTransaction.gia,
-        nhapMaNCC,         // ✅ ID NCC
-        tenN,              // ✅ tên NCC
-        '',                // sdt (chưa có)
-        '',                // diaChi
-        newTransaction.thoiGian.toISOString()      
-      ];
+// 🔥 LẤY ĐỦ THÔNG TIN NCC
+const ncc = dsNhaCungCap.find(n => n.MaNCC === nhapMaNCC);
+const tenN = ncc?.TenNCC || nhapMaNCC;
+const sdtN = ncc?.SoDienThoai || '';
+const diaChiN = ncc?.DiaChi || '';
+
+const newTransaction = {
+  id: Date.now().toString(),
+  type: 'NHAP',
+  maHang: nhapMaHang,
+  tenHang: tenH,
+  soLuong: Number(nhapSoLuong),
+  gia: Number(nhapGia),
+  doiTac: tenN,
+  thoiGian: new Date()
+};
+
+const row = [
+  newTransaction.id,
+  newTransaction.type,
+  newTransaction.maHang,
+  newTransaction.tenHang,
+  newTransaction.soLuong,
+  newTransaction.gia,
+  nhapMaNCC,                       // doiTacId
+  tenN,                            // tenDoiTac
+  sdtN,                            // ✅ FIX QUAN TRỌNG
+  diaChiN,                         // ✅ FIX QUAN TRỌNG
+  newTransaction.thoiGian.toISOString()
+];
 
       const res = await fetch('/api/data?action=addGiaoDich', {
         method: 'POST',
@@ -182,31 +187,37 @@ if (data.hangHoa) {
       inventoryService.banHang(dsNhap, dsBan, { maHang: banMaHang, soLuong: Number(banSoLuong), maKH: banMaKH });
 
       const tk = dsHangHoa.find(h => h.MaHang === banMaHang);
-      const tenH = tk?.TenHang || banMaHang;
-      const tenK = dsKhachHang.find(k => k.MaKH === banMaKH)?.TenKH || banMaKH;
+const tenH = tk?.TenHang || banMaHang;
 
-      const newTransaction = {
-        id: Date.now().toString(),
-        type: 'BAN',
-        maHang: banMaHang,
-        tenHang: tenH,
-        soLuong: Number(banSoLuong),
-        gia: Number(banGia),
-        doiTac: tenK,
-        thoiGian: new Date()
-      };
+const kh = dsKhachHang.find(k => k.MaKH === banMaKH);
+const tenK = kh?.TenKH || banMaKH;
+const sdtK = kh?.SoDienThoai || '';
+const diaChiK = kh?.DiaChi || '';
 
-      const row = [
-        newTransaction.id,
-        newTransaction.type,
-        newTransaction.maHang,
-        newTransaction.tenHang,
-        newTransaction.soLuong,
-        newTransaction.gia,
-        newTransaction.doiTac,
-        newTransaction.thoiGian.toISOString()
-      ];
+const newTransaction = {
+  id: Date.now().toString(),
+  type: 'BAN',
+  maHang: banMaHang,
+  tenHang: tenH,
+  soLuong: Number(banSoLuong),
+  gia: Number(banGia),
+  doiTac: tenK,
+  thoiGian: new Date()
+};
 
+const row = [
+  newTransaction.id,
+  newTransaction.type,
+  newTransaction.maHang,
+  newTransaction.tenHang,
+  newTransaction.soLuong,
+  newTransaction.gia,
+  banMaKH,
+  tenK,
+  sdtK,
+  diaChiK,
+  newTransaction.thoiGian.toISOString()
+];
       const res = await fetch('/api/data?action=addGiaoDich', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
