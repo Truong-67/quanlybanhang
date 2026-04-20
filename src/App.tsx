@@ -75,16 +75,40 @@ setDsHangHoa([]);
       }
 
       if (data.khachHang) {
-        const parsedKH = parseSheet(data.khachHang);
-        setDsKhachHang(parsedKH);
-        if (parsedKH.length > 0) setBanMaKH(prev => prev || parsedKH[0].MaKH);
-      }
+  const parsedKH = parseSheet(data.khachHang).map((item: any) => ({
+    MaKH: item.maKH,
+    TenKH: item.tenKH,
+    SoDienThoai: item.sdt,
+    DiaChi: item.diaChi
+  }));
+  setDsKhachHang(parsedKH);
+  if (parsedKH.length > 0) setBanMaKH(prev => prev || parsedKH[0].MaKH);
+}
 
-      if (data.nhaCungCap) {
-        const parsedNCC = parseSheet(data.nhaCungCap);
-        setDsNhaCungCap(parsedNCC);
-        if (parsedNCC.length > 0) setNhapMaNCC(prev => prev || parsedNCC[0].MaNCC);
-      }
+if (data.nhaCungCap) {
+  const parsedNCC = parseSheet(data.nhaCungCap).map((item: any) => ({
+    MaNCC: item.maNCC,
+    TenNCC: item.tenNCC,
+    SoDienThoai: item.sdt,
+    DiaChi: item.diaChi
+  }));
+  setDsNhaCungCap(parsedNCC);
+  if (parsedNCC.length > 0) setNhapMaNCC(prev => prev || parsedNCC[0].MaNCC);
+}
+
+if (data.hangHoa) {
+  const parsedHH = parseSheet(data.hangHoa).map((item: any) => ({
+    MaHang: item.MaHang,
+    TenHang: item.TenHang,
+    GiaNhap: Number(item.GiaNhap || 0),
+    GiaBan: Number(item.GiaBan || 0)
+  }));
+  setDsHangHoa(parsedHH);
+  if (parsedHH.length > 0) {
+    setNhapMaHang(prev => prev || parsedHH[0].MaHang);
+    setBanMaHang(prev => prev || parsedHH[0].MaHang);
+  }
+}
     } catch (err) {
       console.error(err);
       setError('Lỗi tải dữ liệu từ server');
