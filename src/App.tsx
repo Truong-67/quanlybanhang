@@ -474,7 +474,7 @@ if (data.hangHoa) {
                   </tr>
                 </thead>
                 <tbody>
-                  {hangHoa.map(h => {
+                  {dsHangHoa.map(h => {
                     const ton = inventoryService.getTonByMaHang(dsNhap, dsBan, h.MaHang);
   
                     return (
