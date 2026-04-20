@@ -179,62 +179,67 @@ const row = [
   };
 
   const handleBan = async () => {
-    if (Number(banGia) <= 0) {
-      setError('Giá bán phải lớn hơn 0');
-      return;
-    }
-    try {
-      inventoryService.banHang(dsNhap, dsBan, { maHang: banMaHang, soLuong: Number(banSoLuong), maKH: banMaKH });
+  if (Number(banGia) <= 0) {
+    setError('Giá bán phải lớn hơn 0');
+    return;
+  }
 
-      const tk = dsHangHoa.find(h => h.MaHang === banMaHang);
-const tenH = tk?.TenHang || banMaHang;
+  try {
+    // ❌ bỏ dòng inventoryService
 
-const kh = dsKhachHang.find(k => k.MaKH === banMaKH);
-const tenK = kh?.TenKH || banMaKH;
-const sdtK = kh?.SoDienThoai || '';
-const diaChiK = kh?.DiaChi || '';
+    const tk = dsHangHoa.find(h => h.MaHang === banMaHang);
+    const tenH = tk?.TenHang || banMaHang;
 
-const newTransaction = {
-  id: Date.now().toString(),
-  type: 'BAN',
-  maHang: banMaHang,
-  tenHang: tenH,
-  soLuong: Number(banSoLuong),
-  gia: Number(banGia),
-  doiTac: tenK,
-  thoiGian: new Date()
+    const kh = dsKhachHang.find(k => k.MaKH === banMaKH);
+    const tenK = kh?.TenKH || banMaKH;
+    const sdtK = kh?.SoDienThoai || '';
+    const diaChiK = kh?.DiaChi || '';
+
+    const newTransaction = {
+      id: Date.now().toString(),
+      type: 'BAN',
+      maHang: banMaHang,
+      tenHang: tenH,
+      soLuong: Number(banSoLuong),
+      gia: Number(banGia),
+      doiTac: tenK,
+      thoiGian: new Date()
+    };
+
+    const row = [
+      newTransaction.id,
+      newTransaction.type,
+      newTransaction.maHang,
+      newTransaction.tenHang,
+      newTransaction.soLuong,
+      newTransaction.gia,
+      banMaKH,
+      tenK,
+      sdtK,
+      diaChiK,
+      newTransaction.thoiGian.toISOString()
+    ];
+
+    // 🔥 GỌI API
+    const res = await fetch('/api/data?action=addGiaoDich', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ row })
+    });
+
+    if (!res.ok) throw new Error('Lỗi lưu giao dịch');
+
+    // 🔄 reload từ Google Sheet
+    await loadData();
+
+    setBanSoLuong('');
+    setBanGia('');
+    setError('');
+
+  } catch (err: any) {
+    setError(err.message);
+  }
 };
-
-const row = [
-  newTransaction.id,
-  newTransaction.type,
-  newTransaction.maHang,
-  newTransaction.tenHang,
-  newTransaction.soLuong,
-  newTransaction.gia,
-  banMaKH,
-  tenK,
-  sdtK,
-  diaChiK,
-  newTransaction.thoiGian.toISOString()
-];
-      const res = await fetch('/api/data?action=addGiaoDich', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ row })
-      });
-
-      if (!res.ok) throw new Error('Lỗi lưu giao dịch lên server');
-
-      await loadData();
-
-      setBanSoLuong('');
-      setBanGia('');
-      setError('');
-    } catch (err: any) {
-      setError(err.message);
-    }
-  };
 
   const handleThemKH = () => {
     if (!tenKhachHangMoi.trim() || !sdtKhachHangMoi.trim() || !diaChiKhachHangMoi.trim()) {
