@@ -1,5 +1,6 @@
 import { readSheet, appendRow } from './sheets.js';
 
+// 🔍 tìm theo ID (bỏ header)
 function findById(data: any[][], id: string, colIndex: number) {
   return data.slice(1).find(row => row[colIndex] === id);
 }
@@ -11,18 +12,20 @@ export default async function handler(req: any, res: any) {
     // ================= GET =================
     if (req.method === 'GET') {
       if (action === 'getAll') {
-        const [giaoDich, khachHang, nhaCungCap] = await Promise.all([
+
+        // ✅ PHẢI CÓ 4 BIẾN
+        const [giaoDich, khachHang, nhaCungCap, hangHoa] = await Promise.all([
           readSheet('GIAO_DICH'),
           readSheet('KHACH_HANG'),
           readSheet('NHA_CUNG_CAP'),
-          readSheet('HANG_HOA') // 🔥 THÊM DÒNG NÀY
+          readSheet('HANG_HOA')
         ]);
 
         return res.status(200).json({
           giaoDich,
           khachHang,
           nhaCungCap,
-          hangHoa // 🔥 THÊM DÒNG NÀY
+          hangHoa // ✅ giờ đã hợp lệ
         });
       }
     }
@@ -36,8 +39,10 @@ export default async function handler(req: any, res: any) {
           return res.status(400).json({ error: 'Row không hợp lệ' });
         }
 
-        // Cấu trúc row:
-        // [id, type, maHang, tenHang, soLuong, gia, doiTacId, tenDoiTac, sdt, diaChi, time]
+        /**
+         * row format:
+         * [id, type, maHang, tenHang, soLuong, gia, doiTacId, tenDoiTac, sdt, diaChi, time]
+         */
 
         const type = row[1];
         const doiTacId = row[6];
@@ -45,13 +50,13 @@ export default async function handler(req: any, res: any) {
         const sdt = row[8];
         const diaChi = row[9];
 
-        // Load dữ liệu hiện tại
+        // Load data hiện tại
         const [khachHang, nhaCungCap] = await Promise.all([
           readSheet('KHACH_HANG'),
           readSheet('NHA_CUNG_CAP'),
         ]);
 
-        // ================= THÊM KHÁCH HÀNG =================
+        // ================= KHÁCH HÀNG =================
         if (type === 'BAN') {
           const exists = findById(khachHang, doiTacId, 0);
 
@@ -65,7 +70,7 @@ export default async function handler(req: any, res: any) {
           }
         }
 
-        // ================= THÊM NHÀ CUNG CẤP =================
+        // ================= NHÀ CUNG CẤP =================
         if (type === 'NHAP') {
           const exists = findById(nhaCungCap, doiTacId, 0);
 
@@ -79,22 +84,25 @@ export default async function handler(req: any, res: any) {
           }
         }
 
-        // ================= THÊM GIAO DỊCH =================
+        // ================= GIAO DỊCH =================
         await appendRow('GIAO_DICH', row);
 
         return res.status(200).json({
           success: true,
-          message: 'Đã ghi đầy đủ dữ liệu',
+          message: 'Đã ghi đầy đủ dữ liệu'
         });
       }
     }
 
-    return res.status(400).json({ error: 'Action không hợp lệ' });
+    return res.status(400).json({
+      error: 'Action không hợp lệ'
+    });
 
   } catch (error: any) {
     console.error('API ERROR:', error);
+
     return res.status(500).json({
-      error: error.message,
+      error: error.message || 'Lỗi server'
     });
   }
 }
