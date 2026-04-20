@@ -178,7 +178,7 @@ if (data.hangHoa) {
     try {
       inventoryService.banHang(dsNhap, dsBan, { maHang: banMaHang, soLuong: Number(banSoLuong), maKH: banMaKH });
 
-      const tk = hangHoa.find(h => h.MaHang === banMaHang);
+      const tk = dsHangHoa.find(h => h.MaHang === banMaHang);
       const tenH = tk?.TenHang || banMaHang;
       const tenK = dsKhachHang.find(k => k.MaKH === banMaKH)?.TenKH || banMaKH;
 
