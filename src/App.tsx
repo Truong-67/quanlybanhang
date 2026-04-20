@@ -631,7 +631,7 @@ if (data.hangHoa) {
                   value={nhapMaHang}
                   onChange={(e) => setNhapMaHang(e.target.value)}
                 >
-                  {hangHoa.map(h => (
+                  {dsHangHoa.map(h => (
                     <option key={h.MaHang} value={h.MaHang}>{h.MaHang} - {h.TenHang}</option>
                   ))}
                 </select>
