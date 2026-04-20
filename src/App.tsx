@@ -16,6 +16,7 @@ export default function App() {
 
   const [dsKhachHang, setDsKhachHang] = useState<any[]>([]);
   const [dsNhaCungCap, setDsNhaCungCap] = useState<any[]>([]);
+  const [dsHangHoa, setDsHangHoa] = useState<any[]>([]);
 
   const [nhapMaHang, setNhapMaHang] = useState('');
   const [nhapMaNCC, setNhapMaNCC] = useState('');
