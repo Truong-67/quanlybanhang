@@ -49,6 +49,7 @@ setDsNhap([]);
 setDsBan([]);
 setDsKhachHang([]);
 setDsNhaCungCap([]);
+setDsHangHoa([]);
       const parseSheet = (sheet: any[]) => {
         if (!sheet || sheet.length <= 1) return [];
         const headers = sheet[0];
