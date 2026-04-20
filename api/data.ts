@@ -22,6 +22,7 @@ export default async function handler(req: any, res: any) {
           giaoDich,
           khachHang,
           nhaCungCap,
+          hangHoa // 🔥 THÊM DÒNG NÀY
         });
       }
     }
