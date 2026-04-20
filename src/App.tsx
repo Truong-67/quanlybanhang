@@ -127,7 +127,7 @@ if (data.hangHoa) {
     try {
       //inventoryService.nhapHang(dsNhap, { maHang: nhapMaHang, soLuong: Number(nhapSoLuong), maNCC: nhapMaNCC });
 
-      const tenH = hangHoa.find(h => h.MaHang === nhapMaHang)?.TenHang || nhapMaHang;
+      const tenH = dsHangHoa.find(h => h.MaHang === nhapMaHang)?.TenHang || nhapMaHang;
       const tenN = dsNhaCungCap.find(n => n.MaNCC === nhapMaNCC)?.TenNCC || nhapMaNCC;
       
       const newTransaction = {
