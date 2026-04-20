@@ -4,7 +4,6 @@
  */
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, LabelList } from 'recharts';
-import { hangHoa } from './data/store';
 import { inventoryService, Transaction } from './services/inventoryService';
 
 export default function App() {
