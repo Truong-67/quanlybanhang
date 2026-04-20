@@ -694,7 +694,7 @@ if (data.hangHoa) {
                   value={banMaHang}
                   onChange={(e) => setBanMaHang(e.target.value)}
                 >
-                  {hangHoa.map(h => (
+                  {dsHangHoa.map(h => (
                     <option key={h.MaHang} value={h.MaHang}>{h.MaHang} - {h.TenHang}</option>
                   ))}
                 </select>
