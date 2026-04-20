@@ -148,8 +148,11 @@ if (data.hangHoa) {
         newTransaction.tenHang,
         newTransaction.soLuong,
         newTransaction.gia,
-        newTransaction.doiTac,
-        newTransaction.thoiGian.toISOString()
+        nhapMaNCC,         // ✅ ID NCC
+        tenN,              // ✅ tên NCC
+        '',                // sdt (chưa có)
+        '',                // diaChi
+        newTransaction.thoiGian.toISOString()      
       ];
 
       const res = await fetch('/api/data?action=addGiaoDich', {
