@@ -11,58 +11,109 @@ function getAuth() {
     throw new Error('Thiếu ENV Google Sheets');
   }
 
-  const auth = new google.auth.JWT(
+  return new google.auth.JWT(
     clientEmail,
     undefined,
     privateKey.replace(/\\n/g, '\n'),
     SCOPES
   );
-
-  return auth;
 }
 
 // ================= READ =================
 export async function readSheet(sheetName: string) {
-  try {
-    const auth = getAuth();
-    await auth.authorize();
+  const auth = getAuth();
+  await auth.authorize();
 
-    const sheets = google.sheets({ version: 'v4', auth });
+  const sheets = google.sheets({ version: 'v4', auth });
 
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: process.env.GOOGLE_SHEETS_SPREADSHEET_ID!,
-      range: `${sheetName}!A:Z`, // 🔥 đọc full cột
-    });
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: process.env.GOOGLE_SHEETS_SPREADSHEET_ID!,
+    range: `${sheetName}!A:Z`,
+  });
 
-    return response.data.values || [];
-  } catch (err: any) {
-    console.error('❌ readSheet error:', err.response?.data || err.message);
-    throw new Error('Không đọc được Google Sheet');
-  }
+  return res.data.values || [];
 }
 
 // ================= APPEND =================
 export async function appendRow(sheetName: string, row: any[]) {
-  try {
-    const auth = getAuth();
-    await auth.authorize();
+  const auth = getAuth();
+  await auth.authorize();
 
-    const sheets = google.sheets({ version: 'v4', auth });
+  const sheets = google.sheets({ version: 'v4', auth });
 
-    // 🔥 luôn append từ cột A để tránh lệch
-    const response = await sheets.spreadsheets.values.append({
-      spreadsheetId: process.env.GOOGLE_SHEETS_SPREADSHEET_ID!,
-      range: `${sheetName}!A:A`,
-      valueInputOption: 'USER_ENTERED',
-      insertDataOption: 'INSERT_ROWS',
-      requestBody: {
-        values: [row],
-      },
-    });
+  return sheets.spreadsheets.values.append({
+    spreadsheetId: process.env.GOOGLE_SHEETS_SPREADSHEET_ID!,
+    range: `${sheetName}!A:A`,
+    valueInputOption: 'USER_ENTERED',
+    insertDataOption: 'INSERT_ROWS',
+    requestBody: {
+      values: [row],
+    },
+  });
+}
 
-    return response.data;
-  } catch (err: any) {
-    console.error('❌ appendRow error:', err.response?.data || err.message);
-    throw new Error('Không ghi được Google Sheet');
-  }
+// ================= UPDATE (🔥 QUAN TRỌNG) =================
+export async function updateRowById(
+  sheetName: string,
+  id: string,
+  idColIndex: number,
+  newRow: any[]
+) {
+  const auth = getAuth();
+  await auth.authorize();
+
+  const sheets = google.sheets({ version: 'v4', auth });
+
+  const data = await readSheet(sheetName);
+
+  const rowIndex = data.findIndex((row, i) => i > 0 && row[idColIndex] === id);
+
+  if (rowIndex === -1) throw new Error('Không tìm thấy ID để update');
+
+  const range = `${sheetName}!A${rowIndex + 1}`;
+
+  return sheets.spreadsheets.values.update({
+    spreadsheetId: process.env.GOOGLE_SHEETS_SPREADSHEET_ID!,
+    range,
+    valueInputOption: 'USER_ENTERED',
+    requestBody: {
+      values: [newRow],
+    },
+  });
+}
+
+// ================= DELETE (🔥 QUAN TRỌNG) =================
+export async function deleteRowById(
+  sheetName: string,
+  id: string,
+  idColIndex: number
+) {
+  const auth = getAuth();
+  await auth.authorize();
+
+  const sheets = google.sheets({ version: 'v4', auth });
+
+  const data = await readSheet(sheetName);
+
+  const rowIndex = data.findIndex((row, i) => i > 0 && row[idColIndex] === id);
+
+  if (rowIndex === -1) throw new Error('Không tìm thấy ID để xóa');
+
+  return sheets.spreadsheets.batchUpdate({
+    spreadsheetId: process.env.GOOGLE_SHEETS_SPREADSHEET_ID!,
+    requestBody: {
+      requests: [
+        {
+          deleteDimension: {
+            range: {
+              sheetId: 0, // ⚠️ nếu bạn có nhiều sheet → cần map sheetId
+              dimension: 'ROWS',
+              startIndex: rowIndex,
+              endIndex: rowIndex + 1,
+            },
+          },
+        },
+      ],
+    },
+  });
 }
