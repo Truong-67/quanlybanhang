@@ -273,7 +273,12 @@ export default function App() {
       const nextIdNum = dsKhachHang.length + 1;
       const newMaKH = `KH${nextIdNum.toString().padStart(3, '0')}`;
 
-      const row = [newMaKH, tenKhachHangMoi, sdtKhachHangMoi, diaChiKhachHangMoi];
+      const row = [
+        newMaKH,
+        tenKhachHangMoi.trim(),
+        sdtKhachHangMoi.trim(),
+        diaChiKhachHangMoi.trim()
+      ];
 
       const res = await fetch('/api/data?action=addKhachHang', {
         method: 'POST',
@@ -304,7 +309,12 @@ export default function App() {
       const nextIdNum = dsNhaCungCap.length + 1;
       const newMaNCC = `NCC${nextIdNum.toString().padStart(3, '0')}`;
 
-      const row = [newMaNCC, tenNCCMoi, sdtNCCMoi, diaChiNCCMoi];
+      const row = [
+        newMaNCC,
+        tenNCCMoi.trim(),
+        sdtNCCMoi.trim(),
+        diaChiNCCMoi.trim()
+      ];
 
       const res = await fetch('/api/data?action=addNCC', {
         method: 'POST',
@@ -326,7 +336,7 @@ export default function App() {
   };
 
   const handleThemHangHoa = async () => {
-    if (!tenHangMoi || !donViMoi) {
+    if (!tenHangMoi.trim() || !donViMoi.trim()) {
       setError('Nhập tên hàng và đơn vị');
       return;
     }
@@ -335,10 +345,17 @@ export default function App() {
       const nextId = dsHangHoa.length + 1;
       const ma = `H${nextId.toString().padStart(3, '0')}`;
 
-      const row = [ma, tenHangMoi, donViMoi, Number(giaNhapMoi || 0), Number(giaBanMoi || 0)];
+      const row = [
+        ma,
+        tenHangMoi.trim(),
+        donViMoi.trim(),
+        Number(giaNhapMoi || 0),
+        Number(giaBanMoi || 0)
+      ];
 
       const res = await fetch('/api/data?action=addHangHoa', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ row })
       });
 
