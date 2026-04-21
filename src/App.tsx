@@ -241,35 +241,79 @@ const row = [
   }
 };
 
-  const handleThemKH = () => {
-    if (!tenKhachHangMoi.trim() || !sdtKhachHangMoi.trim() || !diaChiKhachHangMoi.trim()) {
-      setError('Vui lòng nhập đầy đủ thông tin khách hàng');
-      return;
-    }
+  const handleThemKH = async () => {
+  if (!tenKhachHangMoi.trim() || !sdtKhachHangMoi.trim() || !diaChiKhachHangMoi.trim()) {
+    setError('Vui lòng nhập đầy đủ thông tin khách hàng');
+    return;
+  }
+
+  try {
     const nextIdNum = dsKhachHang.length + 1;
     const newMaKH = `KH${nextIdNum.toString().padStart(3, '0')}`;
-    const newKH = { MaKH: newMaKH, TenKH: tenKhachHangMoi, SoDienThoai: sdtKhachHangMoi, DiaChi: diaChiKhachHangMoi };
-    setDsKhachHang([...dsKhachHang, newKH]);
+
+    const row = [
+      newMaKH,
+      tenKhachHangMoi,
+      sdtKhachHangMoi,
+      diaChiKhachHangMoi
+    ];
+
+    const res = await fetch('/api/data?action=addKhachHang', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ row })
+    });
+
+    if (!res.ok) throw new Error('Lỗi thêm khách hàng');
+
+    await loadData();
+
     setTenKhachHangMoi('');
     setSdtKhachHangMoi('');
     setDiaChiKhachHangMoi('');
     setError('');
-  };
 
-  const handleThemNCC = () => {
-    if (!tenNCCMoi.trim() || !sdtNCCMoi.trim() || !diaChiNCCMoi.trim()) {
-      setError('Vui lòng nhập đầy đủ thông tin nhà cung cấp');
-      return;
-    }
+  } catch (err: any) {
+    setError(err.message);
+  }
+};
+
+  const handleThemNCC = async () => {
+  if (!tenNCCMoi.trim() || !sdtNCCMoi.trim() || !diaChiNCCMoi.trim()) {
+    setError('Vui lòng nhập đầy đủ thông tin nhà cung cấp');
+    return;
+  }
+
+  try {
     const nextIdNum = dsNhaCungCap.length + 1;
     const newMaNCC = `NCC${nextIdNum.toString().padStart(3, '0')}`;
-    const newNCC = { MaNCC: newMaNCC, TenNCC: tenNCCMoi, SoDienThoai: sdtNCCMoi, DiaChi: diaChiNCCMoi };
-    setDsNhaCungCap([...dsNhaCungCap, newNCC]);
+
+    const row = [
+      newMaNCC,
+      tenNCCMoi,
+      sdtNCCMoi,
+      diaChiNCCMoi
+    ];
+
+    const res = await fetch('/api/data?action=addNCC', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ row })
+    });
+
+    if (!res.ok) throw new Error('Lỗi thêm NCC');
+
+    await loadData();
+
     setTenNCCMoi('');
     setSdtNCCMoi('');
     setDiaChiNCCMoi('');
     setError('');
-  };
+
+  } catch (err: any) {
+    setError(err.message);
+  }
+};
 
   const handleDeleteKH = (maKH: string) => {
     setDsKhachHang(dsKhachHang.filter(kh => kh.MaKH !== maKH));
