@@ -433,7 +433,7 @@ const handleThemHangHoa = async () => {
           <p className="text-sm text-red-700">{error}</p>
         </div>
       )}
-
+      {tab === 'dashboard' && (
       <main className="flex-1 p-6 flex flex-col lg:flex-row gap-6 items-start h-[calc(100vh-65px)] overflow-hidden">
         
         {/* LEFT COLUMN - 70% */}
@@ -965,6 +965,7 @@ const handleThemHangHoa = async () => {
         </div>
 
       </main>
+      )}
       {/* ===== BOTTOM NAV ===== */}
 <div className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-2 z-50">
   <button onClick={() => setTab('muahang')} className="text-xs">Mua hàng</button>
