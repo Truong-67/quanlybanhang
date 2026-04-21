@@ -317,7 +317,44 @@ const row = [
     setError(err.message);
   }
 };
+const handleThemHangHoa = async () => {
+  if (!tenHangMoi || !donViMoi) {
+    setError('Nhập tên hàng và đơn vị');
+    return;
+  }
 
+  try {
+    const nextId = dsHangHoa.length + 1;
+    const ma = `H${nextId.toString().padStart(3, '0')}`;
+
+    const row = [
+      ma,
+      tenHangMoi,
+      donViMoi,
+      Number(giaNhapMoi || 0),
+      Number(giaBanMoi || 0)
+    ];
+
+    const res = await fetch('/api/data?action=addHangHoa', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ row })
+    });
+
+    if (!res.ok) throw new Error('Lỗi thêm hàng hóa');
+
+    await loadData();
+
+    setTenHangMoi('');
+    setDonViMoi('');
+    setGiaNhapMoi('');
+    setGiaBanMoi('');
+    setError('');
+
+  } catch (err: any) {
+    setError(err.message);
+  }
+};
   const handleDeleteKH = (maKH: string) => {
     setDsKhachHang(dsKhachHang.filter(kh => kh.MaKH !== maKH));
   };
