@@ -910,6 +910,54 @@ const handleThemHangHoa = async () => {
                 >
                   Thêm NCC
                 </button>
+                
+{/* ===== THÊM HÀNG HÓA ===== */}
+<div className="space-y-4 mt-6">
+  <div>
+    <label className="block text-[12px] font-semibold mb-[6px] text-[#475569]">
+      Thêm hàng hóa
+    </label>
+
+    <input
+      type="text"
+      placeholder="Tên hàng"
+      value={tenHangMoi}
+      onChange={(e) => setTenHangMoi(e.target.value)}
+      className="w-full px-3 py-2 border rounded mb-2"
+    />
+
+    <input
+      type="text"
+      placeholder="Đơn vị (kg, cái...)"
+      value={donViMoi}
+      onChange={(e) => setDonViMoi(e.target.value)}
+      className="w-full px-3 py-2 border rounded mb-2"
+    />
+
+    <input
+      type="number"
+      placeholder="Giá nhập"
+      value={giaNhapMoi}
+      onChange={(e) => setGiaNhapMoi(e.target.value)}
+      className="w-full px-3 py-2 border rounded mb-2"
+    />
+
+    <input
+      type="number"
+      placeholder="Giá bán"
+      value={giaBanMoi}
+      onChange={(e) => setGiaBanMoi(e.target.value)}
+      className="w-full px-3 py-2 border rounded mb-2"
+    />
+  </div>
+
+  <button
+    onClick={handleThemHangHoa}
+    className="w-full p-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-semibold text-[14px]"
+  >
+    Thêm hàng hóa
+  </button>
+</div>
               </div>
             </div>
           </div>
