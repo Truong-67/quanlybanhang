@@ -7,6 +7,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, L
 import { inventoryService, Transaction } from './services/inventoryService';
 
 export default function App() {
+  const [tab, setTab] = useState<'dashboard' | 'muahang' | 'banhang' | 'kho' | 'taichinh'>('dashboard');
   const [dsNhap, setDsNhap] = useState<Transaction[]>([]);
   const [dsBan, setDsBan] = useState<Transaction[]>([]);
   const [dsGiaoDich, setDsGiaoDich] = useState<any[]>([]);
@@ -964,6 +965,14 @@ const handleThemHangHoa = async () => {
         </div>
 
       </main>
+      {/* ===== BOTTOM NAV ===== */}
+<div className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around py-2 z-50">
+  <button onClick={() => setTab('muahang')} className="text-xs">Mua hàng</button>
+  <button onClick={() => setTab('banhang')} className="text-xs">Bán hàng</button>
+  <button onClick={() => setTab('dashboard')} className="text-xs">Dashboard</button>
+  <button onClick={() => setTab('taichinh')} className="text-xs">Tài chính</button>
+  <button onClick={() => setTab('kho')} className="text-xs">Kho</button>
+</div>
     </div>
   );
 }
