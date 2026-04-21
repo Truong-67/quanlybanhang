@@ -13,7 +13,6 @@ export default async function handler(req: any, res: any) {
     if (req.method === 'GET') {
       if (action === 'getAll') {
 
-        // ✅ PHẢI CÓ 4 BIẾN
         const [giaoDich, khachHang, nhaCungCap, hangHoa] = await Promise.all([
           readSheet('GIAO_DICH'),
           readSheet('KHACH_HANG'),
@@ -25,13 +24,53 @@ export default async function handler(req: any, res: any) {
           giaoDich,
           khachHang,
           nhaCungCap,
-          hangHoa // ✅ giờ đã hợp lệ
+          hangHoa
         });
       }
     }
 
     // ================= POST =================
     if (req.method === 'POST') {
+
+      // =========================================
+      // 🔥 THÊM KHÁCH HÀNG
+      // =========================================
+      if (action === 'addKhachHang') {
+        const { row } = req.body;
+
+        if (!row || !Array.isArray(row)) {
+          return res.status(400).json({ error: 'Dữ liệu KH không hợp lệ' });
+        }
+
+        await appendRow('KHACH_HANG', row);
+
+        return res.status(200).json({
+          success: true,
+          message: 'Đã thêm khách hàng'
+        });
+      }
+
+      // =========================================
+      // 🔥 THÊM NHÀ CUNG CẤP
+      // =========================================
+      if (action === 'addNCC') {
+        const { row } = req.body;
+
+        if (!row || !Array.isArray(row)) {
+          return res.status(400).json({ error: 'Dữ liệu NCC không hợp lệ' });
+        }
+
+        await appendRow('NHA_CUNG_CAP', row);
+
+        return res.status(200).json({
+          success: true,
+          message: 'Đã thêm nhà cung cấp'
+        });
+      }
+
+      // =========================================
+      // 🔥 THÊM GIAO DỊCH
+      // =========================================
       if (action === 'addGiaoDich') {
         const { row } = req.body;
 
@@ -50,7 +89,7 @@ export default async function handler(req: any, res: any) {
         const sdt = row[8];
         const diaChi = row[9];
 
-        // Load data hiện tại
+        // Load dữ liệu hiện tại
         const [khachHang, nhaCungCap] = await Promise.all([
           readSheet('KHACH_HANG'),
           readSheet('NHA_CUNG_CAP'),
@@ -89,7 +128,7 @@ export default async function handler(req: any, res: any) {
 
         return res.status(200).json({
           success: true,
-          message: 'Đã ghi đầy đủ dữ liệu'
+          message: 'Đã ghi giao dịch'
         });
       }
     }
