@@ -339,7 +339,6 @@ export default function App() {
 
       const res = await fetch('/api/data?action=addHangHoa', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ row })
       });
 
