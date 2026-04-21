@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   BarChart,
   Bar,
@@ -16,12 +16,31 @@ import {
   Cell,
   LabelList
 } from 'recharts';
+import {
+  ShoppingCart,
+  Package,
+  Home,
+  DollarSign,
+  Search,
+  Moon,
+  Sun,
+  Plus,
+  X,
+  AlertTriangle,
+  Pencil,
+  Trash2,
+  RefreshCcw,
+  Users,
+  Truck
+} from 'lucide-react';
 import { inventoryService, Transaction } from './services/inventoryService';
 
 type TabType = 'dashboard' | 'muahang' | 'banhang' | 'kho' | 'taichinh';
+type ThemeMode = 'light' | 'dark';
 
 export default function App() {
   const [tab, setTab] = useState<TabType>('dashboard');
+  const [theme, setTheme] = useState<ThemeMode>('light');
 
   const [dsNhap, setDsNhap] = useState<Transaction[]>([]);
   const [dsBan, setDsBan] = useState<Transaction[]>([]);
@@ -58,12 +77,30 @@ export default function App() {
 
   const [error, setError] = useState('');
 
+  // nâng cấp UI
+  const [searchHangHoa, setSearchHangHoa] = useState('');
+  const [showAddHangModal, setShowAddHangModal] = useState(false);
+  const [showEditHangModal, setShowEditHangModal] = useState(false);
+  const [editingHang, setEditingHang] = useState<any | null>(null);
+  const [lowStockThreshold, setLowStockThreshold] = useState(5);
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('sales-theme') as ThemeMode | null;
+    if (savedTheme === 'dark' || savedTheme === 'light') {
+      setTheme(savedTheme);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('sales-theme', theme);
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+  }, [theme]);
+
   const loadData = async () => {
     try {
       const res = await fetch('/api/data?action=getAll');
       const data = await res.json();
 
-      // RESET TOÀN BỘ STATE
       setDsGiaoDich([]);
       setDsNhap([]);
       setDsBan([]);
@@ -367,10 +404,30 @@ export default function App() {
       setDonViMoi('');
       setGiaNhapMoi('');
       setGiaBanMoi('');
+      setShowAddHangModal(false);
       setError('');
     } catch (err: any) {
       setError(err.message);
     }
+  };
+
+  // chuẩn bị UI sửa/xóa; cần backend để lưu thật
+  const openEditHang = (item: any) => {
+    setEditingHang(item);
+    setTenHangMoi(item.TenHang || '');
+    setDonViMoi(item.DonVi || '');
+    setGiaNhapMoi(String(item.GiaNhap || 0));
+    setGiaBanMoi(String(item.GiaBan || 0));
+    setShowEditHangModal(true);
+  };
+
+  const handleSaveEditHang = async () => {
+    setError('Sửa hàng hóa lưu xuống Google Sheet cần bổ sung endpoint update trong data.ts.');
+    setShowEditHangModal(false);
+  };
+
+  const handleDeleteHang = async (_item: any) => {
+    setError('Xóa hàng hóa lưu xuống Google Sheet cần bổ sung endpoint delete trong data.ts.');
   };
 
   const handleDeleteKH = (maKH: string) => {
@@ -406,9 +463,7 @@ export default function App() {
 
   const doanhThu = filteredGiaoDich
     .filter(gd => gd.type === 'BAN')
-    .reduce((sum, current) => {
-      return sum + current.soLuong * (current.gia || 0);
-    }, 0);
+    .reduce((sum, current) => sum + current.soLuong * (current.gia || 0), 0);
 
   const soGiaoDich = filteredGiaoDich.length;
 
@@ -453,58 +508,135 @@ export default function App() {
   };
 
   const chartTopKhachHang = getTopKhachHang();
+
   const PIE_COLORS = ['#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
   const formatMoney = (n: number) => `${(n || 0).toLocaleString('vi-VN')}đ`;
 
   const iconClass = 'w-5 h-5';
+
   const navClass = (name: TabType) =>
     `flex flex-col items-center justify-center gap-1 text-[11px] font-medium px-2 py-1 rounded-xl transition ${
-      tab === name ? 'text-indigo-600' : 'text-slate-500'
+      tab === name
+        ? theme === 'dark'
+          ? 'text-indigo-300'
+          : 'text-indigo-600'
+        : theme === 'dark'
+          ? 'text-slate-400'
+          : 'text-slate-500'
     }`;
 
+  const filteredHangHoa = useMemo(() => {
+    const keyword = searchHangHoa.trim().toLowerCase();
+    if (!keyword) return dsHangHoa;
+    return dsHangHoa.filter(h => {
+      const ton = inventoryService.getTonByMaHang(dsNhap, dsBan, h.MaHang);
+      return (
+        String(h.MaHang || '').toLowerCase().includes(keyword) ||
+        String(h.TenHang || '').toLowerCase().includes(keyword) ||
+        String(h.DonVi || '').toLowerCase().includes(keyword) ||
+        String(ton).includes(keyword)
+      );
+    });
+  }, [searchHangHoa, dsHangHoa, dsNhap, dsBan]);
+
+  const lowStockItems = useMemo(() => {
+    return dsHangHoa.filter(h => {
+      const ton = inventoryService.getTonByMaHang(dsNhap, dsBan, h.MaHang);
+      return ton <= lowStockThreshold;
+    });
+  }, [dsHangHoa, dsNhap, dsBan, lowStockThreshold]);
+
+  const bgApp = theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-800';
+  const cardClass =
+    theme === 'dark'
+      ? 'bg-slate-900 rounded-3xl shadow-sm border border-slate-800'
+      : 'bg-white rounded-3xl shadow-sm border border-slate-200';
+  const inputClass =
+    theme === 'dark'
+      ? 'w-full rounded-xl border border-slate-700 px-3 py-3 bg-slate-900 text-slate-100 placeholder:text-slate-500'
+      : 'w-full rounded-xl border border-slate-300 px-3 py-3 bg-slate-50 text-slate-800 placeholder:text-slate-400';
+  const mutedText = theme === 'dark' ? 'text-slate-400' : 'text-slate-500';
+  const strongMutedText = theme === 'dark' ? 'text-slate-300' : 'text-slate-700';
+  const borderSoft = theme === 'dark' ? 'border-slate-800' : 'border-slate-200';
+
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-800 pb-24">
+    <div className={`min-h-screen pb-24 transition-colors ${bgApp}`}>
       <header className="sticky top-0 z-30 bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow">
-        <div className="px-4 py-4 flex items-center justify-between">
+        <div className="px-4 py-4 flex items-center justify-between gap-3">
           <div>
             <div className="text-lg font-bold leading-none">Sales Management</div>
             <div className="text-xs text-indigo-100 mt-1">Web App</div>
           </div>
-          <button
-            onClick={loadData}
-            className="text-xs px-3 py-2 rounded-lg bg-white/15 hover:bg-white/20"
-          >
-            Tải lại
-          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setTheme(prev => (prev === 'dark' ? 'light' : 'dark'))}
+              className="p-2 rounded-xl bg-white/15 hover:bg-white/20"
+              title="Đổi giao diện"
+            >
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+
+            <button
+              onClick={loadData}
+              className="text-xs px-3 py-2 rounded-xl bg-white/15 hover:bg-white/20 flex items-center gap-2"
+            >
+              <RefreshCcw size={14} />
+              <span>Tải lại</span>
+            </button>
+          </div>
         </div>
       </header>
 
       {error && (
-        <div className="mx-4 mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className={`mx-4 mt-4 rounded-2xl border px-4 py-3 text-sm ${
+          theme === 'dark'
+            ? 'border-red-900 bg-red-950 text-red-300'
+            : 'border-red-200 bg-red-50 text-red-700'
+        }`}>
           {error}
         </div>
       )}
 
+      {/* DASHBOARD */}
       {tab === 'dashboard' && (
         <main className="p-4 space-y-4">
-          <section className="bg-white rounded-3xl shadow-sm border border-slate-200 p-4">
-            <div className="text-sm font-semibold text-slate-600 mb-3">Bộ lọc thời gian</div>
+          {lowStockItems.length > 0 && (
+            <section className={`rounded-3xl border px-4 py-4 ${
+              theme === 'dark'
+                ? 'border-amber-800 bg-amber-950'
+                : 'border-amber-200 bg-amber-50'
+            }`}>
+              <div className={`flex items-center gap-2 text-sm font-semibold ${
+                theme === 'dark' ? 'text-amber-300' : 'text-amber-700'
+              }`}>
+                <AlertTriangle size={16} />
+                <span>Cảnh báo tồn kho thấp ({lowStockItems.length} mặt hàng)</span>
+              </div>
+              <div className={`mt-2 text-xs ${theme === 'dark' ? 'text-amber-200' : 'text-amber-700'}`}>
+                Ngưỡng cảnh báo hiện tại: ≤ {lowStockThreshold}
+              </div>
+            </section>
+          )}
+
+          <section className={`${cardClass} p-4`}>
+            <div className={`text-sm font-semibold ${strongMutedText} mb-3`}>Bộ lọc thời gian</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-slate-500 mb-1">Từ ngày</label>
+                <label className={`block text-xs ${mutedText} mb-1`}>Từ ngày</label>
                 <input
                   type="date"
-                  className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-slate-50"
+                  className={inputClass.replace('py-3', 'py-2')}
                   value={tuNgay}
                   onChange={e => setTuNgay(e.target.value)}
                 />
               </div>
               <div>
-                <label className="block text-xs text-slate-500 mb-1">Đến ngày</label>
+                <label className={`block text-xs ${mutedText} mb-1`}>Đến ngày</label>
                 <input
                   type="date"
-                  className="w-full rounded-xl border border-slate-300 px-3 py-2 bg-slate-50"
+                  className={inputClass.replace('py-3', 'py-2')}
                   value={denNgay}
                   onChange={e => setDenNgay(e.target.value)}
                 />
@@ -513,40 +645,47 @@ export default function App() {
           </section>
 
           <section className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-4">
-              <div className="text-xs text-slate-500">Tổng nhập</div>
+            <div className={`${cardClass} p-4`}>
+              <div className={`text-xs ${mutedText}`}>Tổng nhập</div>
               <div className="text-lg font-bold mt-1">{formatMoney(tongNhap)}</div>
             </div>
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-4">
-              <div className="text-xs text-slate-500">Tổng bán</div>
+            <div className={`${cardClass} p-4`}>
+              <div className={`text-xs ${mutedText}`}>Tổng bán</div>
               <div className="text-lg font-bold mt-1">{tongBan}</div>
             </div>
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-4">
-              <div className="text-xs text-slate-500">Doanh thu</div>
+            <div className={`${cardClass} p-4`}>
+              <div className={`text-xs ${mutedText}`}>Doanh thu</div>
               <div className="text-lg font-bold mt-1">{formatMoney(doanhThu)}</div>
             </div>
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-4">
-              <div className="text-xs text-slate-500">Số giao dịch</div>
+            <div className={`${cardClass} p-4`}>
+              <div className={`text-xs ${mutedText}`}>Số giao dịch</div>
               <div className="text-lg font-bold mt-1">{soGiaoDich}</div>
             </div>
           </section>
 
           <section className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-4">
-              <div className="text-sm font-semibold text-slate-700 mb-3">Nhập vs Bán</div>
+            <div className={`${cardClass} p-4`}>
+              <div className={`text-sm font-semibold ${strongMutedText} mb-3`}>Nhập vs Bán</div>
               <div className="h-64">
                 {chartNhapVsBan.every(item => item.value === 0) ? (
-                  <div className="h-full flex items-center justify-center text-sm text-slate-400">
+                  <div className={`h-full flex items-center justify-center text-sm ${mutedText}`}>
                     Chưa có dữ liệu
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartNhapVsBan} margin={{ top: 24, right: 12, left: 0, bottom: 0 }}>
-                      <XAxis dataKey="name" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fontSize: 11, fill: theme === 'dark' ? '#cbd5e1' : '#475569' }}
+                        tickLine={false}
+                        axisLine={false}
+                      />
                       <Tooltip
                         contentStyle={{
                           borderRadius: 12,
-                          border: '1px solid #e2e8f0',
+                          border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
+                          background: theme === 'dark' ? '#0f172a' : '#ffffff',
+                          color: theme === 'dark' ? '#f8fafc' : '#0f172a',
                           boxShadow: '0 4px 10px rgba(0,0,0,0.06)'
                         }}
                       />
@@ -557,7 +696,11 @@ export default function App() {
                         <LabelList
                           dataKey="value"
                           position="top"
-                          style={{ fontSize: '11px', fill: '#475569', fontWeight: 600 }}
+                          style={{
+                            fontSize: '11px',
+                            fill: theme === 'dark' ? '#cbd5e1' : '#475569',
+                            fontWeight: 600
+                          }}
                         />
                       </Bar>
                     </BarChart>
@@ -566,22 +709,29 @@ export default function App() {
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-4">
-              <div className="text-sm font-semibold text-slate-700 mb-3">Doanh thu theo ngày</div>
+            <div className={`${cardClass} p-4`}>
+              <div className={`text-sm font-semibold ${strongMutedText} mb-3`}>Doanh thu theo ngày</div>
               <div className="h-64">
                 {chartDoanhThu.length === 0 ? (
-                  <div className="h-full flex items-center justify-center text-sm text-slate-400">
+                  <div className={`h-full flex items-center justify-center text-sm ${mutedText}`}>
                     Chưa có dữ liệu
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartDoanhThu} margin={{ top: 24, right: 12, left: 0, bottom: 0 }}>
-                      <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 11, fill: theme === 'dark' ? '#cbd5e1' : '#475569' }}
+                        tickLine={false}
+                        axisLine={false}
+                      />
                       <Tooltip
                         formatter={(val: number) => `${val.toLocaleString('vi-VN')}đ`}
                         contentStyle={{
                           borderRadius: 12,
-                          border: '1px solid #e2e8f0',
+                          border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
+                          background: theme === 'dark' ? '#0f172a' : '#ffffff',
+                          color: theme === 'dark' ? '#f8fafc' : '#0f172a',
                           boxShadow: '0 4px 10px rgba(0,0,0,0.06)'
                         }}
                       />
@@ -599,11 +749,11 @@ export default function App() {
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-4">
-              <div className="text-sm font-semibold text-slate-700 mb-3">Top khách hàng</div>
+            <div className={`${cardClass} p-4`}>
+              <div className={`text-sm font-semibold ${strongMutedText} mb-3`}>Top khách hàng</div>
               <div className="h-64">
                 {chartTopKhachHang.length === 0 ? (
-                  <div className="h-full flex items-center justify-center text-sm text-slate-400">
+                  <div className={`h-full flex items-center justify-center text-sm ${mutedText}`}>
                     Chưa có dữ liệu
                   </div>
                 ) : (
@@ -613,7 +763,9 @@ export default function App() {
                         formatter={(val: number) => `${val.toLocaleString('vi-VN')}đ`}
                         contentStyle={{
                           borderRadius: 12,
-                          border: '1px solid #e2e8f0',
+                          border: theme === 'dark' ? '1px solid #334155' : '1px solid #e2e8f0',
+                          background: theme === 'dark' ? '#0f172a' : '#ffffff',
+                          color: theme === 'dark' ? '#f8fafc' : '#0f172a',
                           boxShadow: '0 4px 10px rgba(0,0,0,0.06)'
                         }}
                       />
@@ -628,7 +780,11 @@ export default function App() {
                         nameKey="name"
                         label={({ percent }) => `${((percent || 0) * 100).toFixed(0)}%`}
                         labelLine={false}
-                        style={{ fontSize: '11px', fontWeight: 600, fill: '#475569' }}
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          fill: theme === 'dark' ? '#cbd5e1' : '#475569'
+                        }}
                       >
                         {chartTopKhachHang.map((entry, index) => (
                           <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />
@@ -642,28 +798,34 @@ export default function App() {
           </section>
 
           <section className="grid grid-cols-1 2xl:grid-cols-2 gap-4">
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-4">
-              <div className="text-sm font-semibold text-slate-700 mb-3">Tồn kho</div>
+            <div className={`${cardClass} p-4`}>
+              <div className={`text-sm font-semibold ${strongMutedText} mb-3`}>Tồn kho</div>
               <div className="space-y-2 max-h-[420px] overflow-y-auto">
                 {dsHangHoa.map(h => {
                   const ton = inventoryService.getTonByMaHang(dsNhap, dsBan, h.MaHang);
+                  const low = ton <= lowStockThreshold;
+
                   return (
                     <div
                       key={h.MaHang}
-                      className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3"
+                      className={`flex items-center justify-between rounded-2xl border px-4 py-3 ${
+                        theme === 'dark'
+                          ? low
+                            ? 'border-amber-800 bg-amber-950/40'
+                            : 'border-slate-800 bg-slate-900'
+                          : low
+                            ? 'border-amber-200 bg-amber-50'
+                            : 'border-slate-200 bg-white'
+                      }`}
                     >
                       <div>
                         <div className="font-medium">{h.TenHang}</div>
-                        <div className="text-xs text-slate-500">{h.MaHang}</div>
+                        <div className={`text-xs ${mutedText}`}>{h.MaHang}</div>
                       </div>
                       <div className="text-right">
                         <div className="font-bold">{ton}</div>
-                        <div
-                          className={`text-xs mt-1 ${
-                            ton > 0 ? 'text-emerald-600' : 'text-amber-600'
-                          }`}
-                        >
-                          {ton > 0 ? 'Còn hàng' : 'Sắp hết'}
+                        <div className={`text-xs mt-1 ${low ? 'text-amber-500' : 'text-emerald-600'}`}>
+                          {low ? 'Tồn thấp' : 'Còn hàng'}
                         </div>
                       </div>
                     </div>
@@ -672,14 +834,19 @@ export default function App() {
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-4">
-              <div className="text-sm font-semibold text-slate-700 mb-3">Lịch sử giao dịch</div>
+            <div className={`${cardClass} p-4`}>
+              <div className={`text-sm font-semibold ${strongMutedText} mb-3`}>Lịch sử giao dịch</div>
               <div className="space-y-2 max-h-[420px] overflow-y-auto">
                 {filteredGiaoDich.length === 0 ? (
-                  <div className="text-sm text-slate-400 py-8 text-center">Chưa có giao dịch nào</div>
+                  <div className={`text-sm ${mutedText} py-8 text-center`}>Chưa có giao dịch nào</div>
                 ) : (
                   filteredGiaoDich.map(gd => (
-                    <div key={gd.id} className="rounded-2xl border border-slate-200 px-4 py-3">
+                    <div
+                      key={gd.id}
+                      className={`rounded-2xl border px-4 py-3 ${
+                        theme === 'dark' ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'
+                      }`}
+                    >
                       <div className="flex items-center justify-between gap-3">
                         <div className="font-medium">{gd.tenHang}</div>
                         <span
@@ -692,11 +859,11 @@ export default function App() {
                           {gd.type === 'NHAP' ? 'NHẬP' : 'BÁN'}
                         </span>
                       </div>
-                      <div className="text-sm text-slate-500 mt-1">
+                      <div className={`text-sm mt-1 ${mutedText}`}>
                         {gd.soLuong} × {formatMoney(gd.gia || 0)}
                       </div>
-                      <div className="text-xs text-slate-400 mt-1">{gd.doiTac}</div>
-                      <div className="text-xs text-slate-400 mt-1">
+                      <div className={`text-xs mt-1 ${mutedText}`}>{gd.doiTac}</div>
+                      <div className={`text-xs mt-1 ${mutedText}`}>
                         {gd.thoiGian.toLocaleTimeString('vi-VN')} - {gd.thoiGian.toLocaleDateString('vi-VN')}
                       </div>
                     </div>
@@ -708,18 +875,19 @@ export default function App() {
         </main>
       )}
 
+      {/* MUA HÀNG */}
       {tab === 'muahang' && (
         <main className="p-4 space-y-4">
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-5">
+            <div className={`${cardClass} p-5`}>
               <div className="text-lg font-bold mb-1">Nhập kho</div>
-              <div className="text-sm text-slate-500 mb-4">Ghi nhận hàng nhập từ nhà cung cấp</div>
+              <div className={`text-sm ${mutedText} mb-4`}>Ghi nhận hàng nhập từ nhà cung cấp</div>
 
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs text-slate-500 mb-1">Nhà cung cấp</label>
+                  <label className={`block text-xs ${mutedText} mb-1`}>Nhà cung cấp</label>
                   <select
-                    className="w-full rounded-xl border border-slate-300 px-3 py-3 bg-slate-50"
+                    className={inputClass}
                     value={nhapMaNCC}
                     onChange={e => setNhapMaNCC(e.target.value)}
                   >
@@ -732,9 +900,9 @@ export default function App() {
                 </div>
 
                 <div>
-                  <label className="block text-xs text-slate-500 mb-1">Mặt hàng</label>
+                  <label className={`block text-xs ${mutedText} mb-1`}>Mặt hàng</label>
                   <select
-                    className="w-full rounded-xl border border-slate-300 px-3 py-3 bg-slate-50"
+                    className={inputClass}
                     value={nhapMaHang}
                     onChange={e => setNhapMaHang(e.target.value)}
                   >
@@ -748,22 +916,22 @@ export default function App() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-slate-500 mb-1">Số lượng nhập</label>
+                    <label className={`block text-xs ${mutedText} mb-1`}>Số lượng nhập</label>
                     <input
                       type="number"
                       min="1"
-                      className="w-full rounded-xl border border-slate-300 px-3 py-3 bg-slate-50"
+                      className={inputClass}
                       value={nhapSoLuong}
                       onChange={e => setNhapSoLuong(e.target.value)}
                       placeholder="0"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-500 mb-1">Giá nhập</label>
+                    <label className={`block text-xs ${mutedText} mb-1`}>Giá nhập</label>
                     <input
                       type="number"
                       min="1"
-                      className="w-full rounded-xl border border-slate-300 px-3 py-3 bg-slate-50"
+                      className={inputClass}
                       value={nhapGia}
                       onChange={e => setNhapGia(e.target.value)}
                       placeholder="0"
@@ -780,28 +948,28 @@ export default function App() {
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-5">
+            <div className={`${cardClass} p-5`}>
               <div className="text-lg font-bold mb-1">Nhà cung cấp</div>
-              <div className="text-sm text-slate-500 mb-4">Thêm và xem nhanh danh sách NCC</div>
+              <div className={`text-sm ${mutedText} mb-4`}>Thêm và xem nhanh danh sách NCC</div>
 
               <div className="space-y-3">
                 <input
                   type="text"
-                  className="w-full rounded-xl border border-slate-300 px-3 py-3 bg-slate-50"
+                  className={inputClass}
                   value={tenNCCMoi}
                   onChange={e => setTenNCCMoi(e.target.value)}
                   placeholder="Tên nhà cung cấp"
                 />
                 <input
                   type="text"
-                  className="w-full rounded-xl border border-slate-300 px-3 py-3 bg-slate-50"
+                  className={inputClass}
                   value={sdtNCCMoi}
                   onChange={e => setSdtNCCMoi(e.target.value)}
                   placeholder="Số điện thoại"
                 />
                 <input
                   type="text"
-                  className="w-full rounded-xl border border-slate-300 px-3 py-3 bg-slate-50"
+                  className={inputClass}
                   value={diaChiNCCMoi}
                   onChange={e => setDiaChiNCCMoi(e.target.value)}
                   placeholder="Địa chỉ"
@@ -818,11 +986,13 @@ export default function App() {
                 {dsNhaCungCap.map(ncc => (
                   <div
                     key={ncc.MaNCC}
-                    className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3"
+                    className={`flex items-center justify-between rounded-2xl border px-4 py-3 ${
+                      theme === 'dark' ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'
+                    }`}
                   >
                     <div>
                       <div className="font-medium">{ncc.TenNCC}</div>
-                      <div className="text-xs text-slate-500">
+                      <div className={`text-xs ${mutedText}`}>
                         {ncc.MaNCC} · {ncc.SoDienThoai}
                       </div>
                     </div>
@@ -840,18 +1010,19 @@ export default function App() {
         </main>
       )}
 
+      {/* BÁN HÀNG */}
       {tab === 'banhang' && (
         <main className="p-4 space-y-4">
           <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-5">
+            <div className={`${cardClass} p-5`}>
               <div className="text-lg font-bold mb-1">Bán hàng</div>
-              <div className="text-sm text-slate-500 mb-4">Tạo giao dịch bán cho khách hàng</div>
+              <div className={`text-sm ${mutedText} mb-4`}>Tạo giao dịch bán cho khách hàng</div>
 
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs text-slate-500 mb-1">Khách hàng</label>
+                  <label className={`block text-xs ${mutedText} mb-1`}>Khách hàng</label>
                   <select
-                    className="w-full rounded-xl border border-slate-300 px-3 py-3 bg-slate-50"
+                    className={inputClass}
                     value={banMaKH}
                     onChange={e => setBanMaKH(e.target.value)}
                   >
@@ -864,9 +1035,9 @@ export default function App() {
                 </div>
 
                 <div>
-                  <label className="block text-xs text-slate-500 mb-1">Mặt hàng</label>
+                  <label className={`block text-xs ${mutedText} mb-1`}>Mặt hàng</label>
                   <select
-                    className="w-full rounded-xl border border-slate-300 px-3 py-3 bg-slate-50"
+                    className={inputClass}
                     value={banMaHang}
                     onChange={e => setBanMaHang(e.target.value)}
                   >
@@ -880,22 +1051,22 @@ export default function App() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-slate-500 mb-1">Số lượng bán</label>
+                    <label className={`block text-xs ${mutedText} mb-1`}>Số lượng bán</label>
                     <input
                       type="number"
                       min="1"
-                      className="w-full rounded-xl border border-slate-300 px-3 py-3 bg-slate-50"
+                      className={inputClass}
                       value={banSoLuong}
                       onChange={e => setBanSoLuong(e.target.value)}
                       placeholder="0"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-500 mb-1">Giá bán</label>
+                    <label className={`block text-xs ${mutedText} mb-1`}>Giá bán</label>
                     <input
                       type="number"
                       min="1"
-                      className="w-full rounded-xl border border-slate-300 px-3 py-3 bg-slate-50"
+                      className={inputClass}
                       value={banGia}
                       onChange={e => setBanGia(e.target.value)}
                       placeholder="0"
@@ -912,28 +1083,28 @@ export default function App() {
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-5">
+            <div className={`${cardClass} p-5`}>
               <div className="text-lg font-bold mb-1">Khách hàng</div>
-              <div className="text-sm text-slate-500 mb-4">Thêm và quản lý danh sách khách hàng</div>
+              <div className={`text-sm ${mutedText} mb-4`}>Thêm và quản lý danh sách khách hàng</div>
 
               <div className="space-y-3">
                 <input
                   type="text"
-                  className="w-full rounded-xl border border-slate-300 px-3 py-3 bg-slate-50"
+                  className={inputClass}
                   value={tenKhachHangMoi}
                   onChange={e => setTenKhachHangMoi(e.target.value)}
                   placeholder="Tên khách hàng"
                 />
                 <input
                   type="text"
-                  className="w-full rounded-xl border border-slate-300 px-3 py-3 bg-slate-50"
+                  className={inputClass}
                   value={sdtKhachHangMoi}
                   onChange={e => setSdtKhachHangMoi(e.target.value)}
                   placeholder="Số điện thoại"
                 />
                 <input
                   type="text"
-                  className="w-full rounded-xl border border-slate-300 px-3 py-3 bg-slate-50"
+                  className={inputClass}
                   value={diaChiKhachHangMoi}
                   onChange={e => setDiaChiKhachHangMoi(e.target.value)}
                   placeholder="Địa chỉ"
@@ -950,11 +1121,13 @@ export default function App() {
                 {dsKhachHang.map(kh => (
                   <div
                     key={kh.MaKH}
-                    className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3"
+                    className={`flex items-center justify-between rounded-2xl border px-4 py-3 ${
+                      theme === 'dark' ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'
+                    }`}
                   >
                     <div>
                       <div className="font-medium">{kh.TenKH}</div>
-                      <div className="text-xs text-slate-500">
+                      <div className={`text-xs ${mutedText}`}>
                         {kh.MaKH} · {kh.SoDienThoai}
                       </div>
                     </div>
@@ -972,79 +1145,197 @@ export default function App() {
         </main>
       )}
 
+      {/* KHO */}
       {tab === 'kho' && (
         <main className="p-4 space-y-4">
-          <section className="bg-white rounded-3xl shadow-sm border border-slate-200 p-5">
-            <div className="text-lg font-bold mb-1">Kho hàng</div>
-            <div className="text-sm text-slate-500 mb-4">Danh mục hàng hóa và tồn kho hiện tại</div>
+          <section className={`${cardClass} p-5`}>
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
+              <div>
+                <div className="text-lg font-bold mb-1">Kho hàng</div>
+                <div className={`text-sm ${mutedText}`}>Danh mục hàng hóa, tìm kiếm, cảnh báo tồn thấp</div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative min-w-[260px]">
+                  <Search size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${mutedText}`} />
+                  <input
+                    type="text"
+                    value={searchHangHoa}
+                    onChange={e => setSearchHangHoa(e.target.value)}
+                    placeholder="Tìm mã hàng, tên hàng, đơn vị..."
+                    className={`${inputClass} pl-9`}
+                  />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm ${mutedText}`}>Ngưỡng cảnh báo</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={lowStockThreshold}
+                    onChange={e => setLowStockThreshold(Number(e.target.value || 0))}
+                    className={`${inputClass} w-24 py-2`}
+                  />
+                </div>
+
+                <button
+                  onClick={() => {
+                    setTenHangMoi('');
+                    setDonViMoi('');
+                    setGiaNhapMoi('');
+                    setGiaBanMoi('');
+                    setShowAddHangModal(true);
+                  }}
+                  className="rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-4 py-3 flex items-center justify-center gap-2"
+                >
+                  <Plus size={16} />
+                  <span>Thêm hàng</span>
+                </button>
+              </div>
+            </div>
+
+            {lowStockItems.length > 0 && (
+              <div className={`mb-4 rounded-2xl border px-4 py-3 ${
+                theme === 'dark'
+                  ? 'border-amber-800 bg-amber-950'
+                  : 'border-amber-200 bg-amber-50'
+              }`}>
+                <div className={`flex items-center gap-2 text-sm font-semibold ${
+                  theme === 'dark' ? 'text-amber-300' : 'text-amber-700'
+                }`}>
+                  <AlertTriangle size={16} />
+                  <span>
+                    Có {lowStockItems.length} mặt hàng tồn thấp (≤ {lowStockThreshold})
+                  </span>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
               <div className="space-y-3">
-                {dsHangHoa.map(h => {
-                  const ton = inventoryService.getTonByMaHang(dsNhap, dsBan, h.MaHang);
-                  return (
-                    <div
-                      key={h.MaHang}
-                      className="rounded-2xl border border-slate-200 px-4 py-3 flex items-center justify-between"
-                    >
-                      <div>
-                        <div className="font-medium">{h.TenHang}</div>
-                        <div className="text-xs text-slate-500">
-                          {h.MaHang}
-                          {h.DonVi ? ` · ${h.DonVi}` : ''}
+                {filteredHangHoa.length === 0 ? (
+                  <div className={`rounded-2xl border px-4 py-10 text-center ${
+                    theme === 'dark' ? 'border-slate-800 bg-slate-900 text-slate-400' : 'border-slate-200 bg-white text-slate-400'
+                  }`}>
+                    Không tìm thấy hàng hóa phù hợp
+                  </div>
+                ) : (
+                  filteredHangHoa.map(h => {
+                    const ton = inventoryService.getTonByMaHang(dsNhap, dsBan, h.MaHang);
+                    const low = ton <= lowStockThreshold;
+
+                    return (
+                      <div
+                        key={h.MaHang}
+                        className={`rounded-2xl border px-4 py-4 flex items-center justify-between gap-3 ${
+                          theme === 'dark'
+                            ? low
+                              ? 'border-amber-800 bg-amber-950/40'
+                              : 'border-slate-800 bg-slate-900'
+                            : low
+                              ? 'border-amber-200 bg-amber-50'
+                              : 'border-slate-200 bg-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`p-3 rounded-2xl ${
+                            theme === 'dark' ? 'bg-slate-800' : 'bg-indigo-50'
+                          }`}>
+                            <Package size={18} className={theme === 'dark' ? 'text-indigo-300' : 'text-indigo-600'} />
+                          </div>
+
+                          <div className="min-w-0">
+                            <div className="font-medium truncate">{h.TenHang}</div>
+                            <div className={`text-xs ${mutedText}`}>
+                              {h.MaHang}
+                              {h.DonVi ? ` · ${h.DonVi}` : ''}
+                            </div>
+                            <div className={`text-xs mt-1 ${mutedText}`}>
+                              Giá nhập: {formatMoney(h.GiaNhap || 0)} · Giá bán: {formatMoney(h.GiaBan || 0)}
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-xs text-slate-400 mt-1">
-                          Giá nhập: {formatMoney(h.GiaNhap || 0)} · Giá bán: {formatMoney(h.GiaBan || 0)}
+
+                        <div className="text-right shrink-0">
+                          <div className="font-bold text-lg">{ton}</div>
+                          <div className={`text-xs ${low ? 'text-amber-500' : 'text-emerald-600'}`}>
+                            {low ? 'Tồn thấp' : 'Còn hàng'}
+                          </div>
+
+                          <div className="flex items-center justify-end gap-1 mt-2">
+                            <button
+                              onClick={() => openEditHang(h)}
+                              className={`p-2 rounded-xl ${
+                                theme === 'dark'
+                                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-200'
+                                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                              }`}
+                              title="Sửa hàng"
+                            >
+                              <Pencil size={14} />
+                            </button>
+
+                            <button
+                              onClick={() => handleDeleteHang(h)}
+                              className={`p-2 rounded-xl ${
+                                theme === 'dark'
+                                  ? 'bg-red-950 hover:bg-red-900 text-red-300'
+                                  : 'bg-red-50 hover:bg-red-100 text-red-600'
+                              }`}
+                              title="Xóa hàng"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-bold text-lg">{ton}</div>
-                        <div className={`text-xs ${ton > 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
-                          {ton > 0 ? 'Còn hàng' : 'Sắp hết'}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
 
-              <div className="bg-slate-50 rounded-3xl border border-slate-200 p-4">
-                <div className="text-base font-bold mb-3">Thêm hàng hóa</div>
-                <div className="space-y-3">
-                  <input
-                    type="text"
-                    placeholder="Tên hàng"
-                    value={tenHangMoi}
-                    onChange={e => setTenHangMoi(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 px-3 py-3 bg-white"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Đơn vị (kg, cái...)"
-                    value={donViMoi}
-                    onChange={e => setDonViMoi(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 px-3 py-3 bg-white"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Giá nhập"
-                    value={giaNhapMoi}
-                    onChange={e => setGiaNhapMoi(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 px-3 py-3 bg-white"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Giá bán"
-                    value={giaBanMoi}
-                    onChange={e => setGiaBanMoi(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 px-3 py-3 bg-white"
-                  />
-                  <button
-                    onClick={handleThemHangHoa}
-                    className="w-full rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3"
-                  >
-                    Thêm hàng hóa
-                  </button>
+              <div className={`${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'} rounded-3xl border p-4`}>
+                <div className="text-base font-bold mb-3">Tổng quan kho</div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className={`${cardClass} p-4`}>
+                    <div className={`text-xs ${mutedText}`}>Tổng mặt hàng</div>
+                    <div className="text-lg font-bold mt-1">{dsHangHoa.length}</div>
+                  </div>
+                  <div className={`${cardClass} p-4`}>
+                    <div className={`text-xs ${mutedText}`}>Tồn thấp</div>
+                    <div className="text-lg font-bold mt-1">{lowStockItems.length}</div>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <div className={`text-sm font-semibold ${strongMutedText} mb-2`}>Danh sách cần chú ý</div>
+                  <div className="space-y-2 max-h-72 overflow-y-auto">
+                    {lowStockItems.length === 0 ? (
+                      <div className={`text-sm ${mutedText}`}>Không có mặt hàng nào dưới ngưỡng cảnh báo.</div>
+                    ) : (
+                      lowStockItems.map(h => {
+                        const ton = inventoryService.getTonByMaHang(dsNhap, dsBan, h.MaHang);
+                        return (
+                          <div
+                            key={`warn-${h.MaHang}`}
+                            className={`rounded-2xl border px-4 py-3 ${
+                              theme === 'dark' ? 'border-amber-800 bg-amber-950/40' : 'border-amber-200 bg-amber-50'
+                            }`}
+                          >
+                            <div className="font-medium">{h.TenHang}</div>
+                            <div className={`text-xs mt-1 ${theme === 'dark' ? 'text-amber-200' : 'text-amber-700'}`}>
+                              {h.MaHang} · Tồn hiện tại: {ton}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                <div className={`mt-4 text-xs ${mutedText}`}>
+                  Sửa/Xóa hiện đã có giao diện. Để lưu thật xuống Google Sheet, cần bổ sung endpoint update/delete trong <code>data.ts</code>.
                 </div>
               </div>
             </div>
@@ -1052,27 +1343,28 @@ export default function App() {
         </main>
       )}
 
+      {/* TÀI CHÍNH */}
       {tab === 'taichinh' && (
         <main className="p-4 space-y-4">
-          <section className="bg-white rounded-3xl shadow-sm border border-slate-200 p-5">
+          <section className={`${cardClass} p-5`}>
             <div className="text-lg font-bold mb-1">Tài chính</div>
-            <div className="text-sm text-slate-500 mb-4">Danh sách giao dịch theo thời gian</div>
+            <div className={`text-sm ${mutedText} mb-4`}>Danh sách giao dịch theo thời gian</div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
               <div>
-                <label className="block text-xs text-slate-500 mb-1">Từ ngày</label>
+                <label className={`block text-xs ${mutedText} mb-1`}>Từ ngày</label>
                 <input
                   type="date"
-                  className="w-full rounded-xl border border-slate-300 px-3 py-3 bg-slate-50"
+                  className={inputClass}
                   value={tuNgay}
                   onChange={e => setTuNgay(e.target.value)}
                 />
               </div>
               <div>
-                <label className="block text-xs text-slate-500 mb-1">Đến ngày</label>
+                <label className={`block text-xs ${mutedText} mb-1`}>Đến ngày</label>
                 <input
                   type="date"
-                  className="w-full rounded-xl border border-slate-300 px-3 py-3 bg-slate-50"
+                  className={inputClass}
                   value={denNgay}
                   onChange={e => setDenNgay(e.target.value)}
                 />
@@ -1080,36 +1372,38 @@ export default function App() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-              <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50">
-                <div className="text-xs text-slate-500">Tổng nhập</div>
+              <div className={`${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'} rounded-2xl border p-4`}>
+                <div className={`text-xs ${mutedText}`}>Tổng nhập</div>
                 <div className="font-bold mt-1">{formatMoney(tongNhap)}</div>
               </div>
-              <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50">
-                <div className="text-xs text-slate-500">Doanh thu</div>
+              <div className={`${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'} rounded-2xl border p-4`}>
+                <div className={`text-xs ${mutedText}`}>Doanh thu</div>
                 <div className="font-bold mt-1">{formatMoney(doanhThu)}</div>
               </div>
-              <div className="rounded-2xl border border-slate-200 p-4 bg-slate-50">
-                <div className="text-xs text-slate-500">Số giao dịch</div>
+              <div className={`${theme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-slate-200'} rounded-2xl border p-4`}>
+                <div className={`text-xs ${mutedText}`}>Số giao dịch</div>
                 <div className="font-bold mt-1">{soGiaoDich}</div>
               </div>
             </div>
 
             <div className="space-y-2 max-h-[520px] overflow-y-auto">
               {filteredGiaoDich.length === 0 ? (
-                <div className="text-sm text-slate-400 py-8 text-center">Chưa có giao dịch nào</div>
+                <div className={`text-sm ${mutedText} py-8 text-center`}>Chưa có giao dịch nào</div>
               ) : (
                 filteredGiaoDich.map(gd => (
                   <div
                     key={gd.id}
-                    className="rounded-2xl border border-slate-200 px-4 py-3 flex items-start justify-between gap-4"
+                    className={`rounded-2xl border px-4 py-3 flex items-start justify-between gap-4 ${
+                      theme === 'dark' ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'
+                    }`}
                   >
                     <div>
                       <div className="font-medium">{gd.tenHang}</div>
-                      <div className="text-sm text-slate-500 mt-1">
+                      <div className={`text-sm mt-1 ${mutedText}`}>
                         {gd.soLuong} × {formatMoney(gd.gia || 0)}
                       </div>
-                      <div className="text-xs text-slate-400 mt-1">{gd.doiTac}</div>
-                      <div className="text-xs text-slate-400 mt-1">
+                      <div className={`text-xs mt-1 ${mutedText}`}>{gd.doiTac}</div>
+                      <div className={`text-xs mt-1 ${mutedText}`}>
                         {gd.thoiGian.toLocaleTimeString('vi-VN')} - {gd.thoiGian.toLocaleDateString('vi-VN')}
                       </div>
                     </div>
@@ -1132,40 +1426,178 @@ export default function App() {
         </main>
       )}
 
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur">
+      {/* MODAL THÊM HÀNG */}
+      {showAddHangModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4">
+          <div className={`${cardClass} w-full max-w-lg p-5`}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-lg font-bold">Thêm hàng hóa</div>
+              <button
+                onClick={() => setShowAddHangModal(false)}
+                className={`p-2 rounded-xl ${theme === 'dark' ? 'hover:bg-slate-800' : 'hover:bg-slate-100'}`}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <input
+                type="text"
+                placeholder="Tên hàng"
+                value={tenHangMoi}
+                onChange={e => setTenHangMoi(e.target.value)}
+                className={inputClass}
+              />
+              <input
+                type="text"
+                placeholder="Đơn vị (kg, cái...)"
+                value={donViMoi}
+                onChange={e => setDonViMoi(e.target.value)}
+                className={inputClass}
+              />
+              <input
+                type="number"
+                placeholder="Giá nhập"
+                value={giaNhapMoi}
+                onChange={e => setGiaNhapMoi(e.target.value)}
+                className={inputClass}
+              />
+              <input
+                type="number"
+                placeholder="Giá bán"
+                value={giaBanMoi}
+                onChange={e => setGiaBanMoi(e.target.value)}
+                className={inputClass}
+              />
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button
+                  onClick={() => setShowAddHangModal(false)}
+                  className={`rounded-2xl py-3 font-semibold ${
+                    theme === 'dark' ? 'bg-slate-800 text-slate-100' : 'bg-slate-100 text-slate-700'
+                  }`}
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleThemHangHoa}
+                  className="rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3"
+                >
+                  Lưu hàng hóa
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL SỬA HÀNG */}
+      {showEditHangModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4">
+          <div className={`${cardClass} w-full max-w-lg p-5`}>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <div className="text-lg font-bold">Sửa hàng hóa</div>
+                <div className={`text-xs ${mutedText} mt-1`}>
+                  {editingHang?.MaHang || ''}
+                </div>
+              </div>
+              <button
+                onClick={() => setShowEditHangModal(false)}
+                className={`p-2 rounded-xl ${theme === 'dark' ? 'hover:bg-slate-800' : 'hover:bg-slate-100'}`}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <input
+                type="text"
+                placeholder="Tên hàng"
+                value={tenHangMoi}
+                onChange={e => setTenHangMoi(e.target.value)}
+                className={inputClass}
+              />
+              <input
+                type="text"
+                placeholder="Đơn vị"
+                value={donViMoi}
+                onChange={e => setDonViMoi(e.target.value)}
+                className={inputClass}
+              />
+              <input
+                type="number"
+                placeholder="Giá nhập"
+                value={giaNhapMoi}
+                onChange={e => setGiaNhapMoi(e.target.value)}
+                className={inputClass}
+              />
+              <input
+                type="number"
+                placeholder="Giá bán"
+                value={giaBanMoi}
+                onChange={e => setGiaBanMoi(e.target.value)}
+                className={inputClass}
+              />
+
+              <div className={`rounded-2xl border px-4 py-3 text-sm ${
+                theme === 'dark'
+                  ? 'border-amber-800 bg-amber-950 text-amber-200'
+                  : 'border-amber-200 bg-amber-50 text-amber-700'
+              }`}>
+                Chức năng sửa/xóa đã có giao diện. Để lưu thật xuống Google Sheet, cần thêm endpoint update/delete trong backend.
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button
+                  onClick={() => setShowEditHangModal(false)}
+                  className={`rounded-2xl py-3 font-semibold ${
+                    theme === 'dark' ? 'bg-slate-800 text-slate-100' : 'bg-slate-100 text-slate-700'
+                  }`}
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleSaveEditHang}
+                  className="rounded-2xl bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-3"
+                >
+                  Lưu chỉnh sửa
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NAV */}
+      <nav className={`fixed bottom-0 left-0 right-0 z-40 border-t backdrop-blur ${
+        theme === 'dark'
+          ? 'border-slate-800 bg-slate-950/95'
+          : 'border-slate-200 bg-white/95'
+      }`}>
         <div className="max-w-4xl mx-auto grid grid-cols-5 px-2 py-2">
           <button onClick={() => setTab('muahang')} className={navClass('muahang')}>
-            <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13l-1 5h11M9 19a1 1 0 100 2 1 1 0 000-2zm8 0a1 1 0 100 2 1 1 0 000-2z" />
-            </svg>
+            <Truck className={iconClass} />
             <span>Mua</span>
           </button>
 
           <button onClick={() => setTab('banhang')} className={navClass('banhang')}>
-            <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 9V7a5 5 0 00-10 0v2M5 9h14l-1 10H6L5 9z" />
-            </svg>
+            <ShoppingCart className={iconClass} />
             <span>Bán</span>
           </button>
 
           <button onClick={() => setTab('dashboard')} className={navClass('dashboard')}>
-            <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l9-9 9 9M4 10v10h5v-6h6v6h5V10" />
-            </svg>
+            <Home className={iconClass} />
             <span>Home</span>
           </button>
 
           <button onClick={() => setTab('taichinh')} className={navClass('taichinh')}>
-            <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-2.21 0-4 .895-4 2s1.79 2 4 2 4 .895 4 2-1.79 2-4 2m0-10v12m9-6a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <DollarSign className={iconClass} />
             <span>Tiền</span>
           </button>
 
           <button onClick={() => setTab('kho')} className={navClass('kho')}>
-            <svg className={iconClass} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" />
-            </svg>
+            <Package className={iconClass} />
             <span>Kho</span>
           </button>
         </div>
