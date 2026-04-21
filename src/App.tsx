@@ -422,13 +422,56 @@ export default function App() {
   };
 
   const handleSaveEditHang = async () => {
-    setError('Sửa hàng hóa lưu xuống Google Sheet cần bổ sung endpoint update trong data.ts.');
-    setShowEditHangModal(false);
-  };
+  try {
+    if (!editingHang) return;
 
-  const handleDeleteHang = async (_item: any) => {
-    setError('Xóa hàng hóa lưu xuống Google Sheet cần bổ sung endpoint delete trong data.ts.');
-  };
+    const row = [
+      editingHang.MaHang,
+      tenHangMoi,
+      donViMoi,
+      Number(giaNhapMoi || 0),
+      Number(giaBanMoi || 0)
+    ];
+
+    const res = await fetch('/api/data?action=updateHangHoa', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ row })
+    });
+
+    if (!res.ok) throw new Error('Lỗi cập nhật hàng hóa');
+
+    await loadData();
+
+    setShowEditHangModal(false);
+    setEditingHang(null);
+
+  } catch (err: any) {
+    setError(err.message);
+  }
+};
+
+  const handleDeleteHang = async (item: any) => {
+  try {
+    const confirmDelete = confirm(`Xóa hàng "${item.TenHang}"?`);
+    if (!confirmDelete) return;
+
+    const res = await fetch('/api/data?action=deleteHangHoa', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: item.MaHang
+      })
+    });
+
+    if (!res.ok) throw new Error('Lỗi xóa hàng hóa');
+
+    await loadData();
+
+  } catch (err: any) {
+    setError(err.message);
+  }
+};
 
   const handleDeleteKH = (maKH: string) => {
     setDsKhachHang(dsKhachHang.filter(kh => kh.MaKH !== maKH));
