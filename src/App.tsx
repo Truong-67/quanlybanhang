@@ -1378,7 +1378,7 @@ export default function App() {
                 </div>
 
                 <div className={`mt-4 text-xs ${mutedText}`}>
-                  Sửa/Xóa hiện đã có giao diện. Để lưu thật xuống Google Sheet, cần bổ sung endpoint update/delete trong <code>data.ts</code>.
+                  ✔ Có thể sửa / xóa trực tiếp
                 </div>
               </div>
             </div>
