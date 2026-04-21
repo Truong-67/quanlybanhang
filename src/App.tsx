@@ -30,7 +30,10 @@ export default function App() {
 
   const [tenKhachHangMoi, setTenKhachHangMoi] = useState('');
   const [tenNCCMoi, setTenNCCMoi] = useState('');
-
+  const [tenHangMoi, setTenHangMoi] = useState('');
+  const [donViMoi, setDonViMoi] = useState('');
+  const [giaNhapMoi, setGiaNhapMoi] = useState('');
+  const [giaBanMoi, setGiaBanMoi] = useState('');
   const [sdtKhachHangMoi, setSdtKhachHangMoi] = useState('');
   const [diaChiKhachHangMoi, setDiaChiKhachHangMoi] = useState('');
 
