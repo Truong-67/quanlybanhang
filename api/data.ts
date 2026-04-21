@@ -77,7 +77,29 @@ export default async function handler(req: any, res: any) {
         if (!row || !Array.isArray(row)) {
           return res.status(400).json({ error: 'Row không hợp lệ' });
         }
+      // =========================================
+// 🔥 THÊM HÀNG HÓA
+// =========================================
+if (action === 'addHangHoa') {
+  const { row } = req.body;
 
+  // kiểm tra dữ liệu
+  if (!row || !Array.isArray(row)) {
+    return res.status(400).json({ error: 'Dữ liệu hàng hóa không hợp lệ' });
+  }
+
+  /**
+   * row format:
+   * [MaHang, TenHang, DonVi, GiaNhap, GiaBan]
+   */
+
+  await appendRow('HANG_HOA', row);
+
+  return res.status(200).json({
+    success: true,
+    message: 'Đã thêm hàng hóa'
+  });
+}
         /**
          * row format:
          * [id, type, maHang, tenHang, soLuong, gia, doiTacId, tenDoiTac, sdt, diaChi, time]
