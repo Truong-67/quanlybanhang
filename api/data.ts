@@ -5,18 +5,38 @@ import {
   deleteRowById
 } from './sheets.js';
 
-// 🔍 tìm theo ID (bỏ header)
+// ================= CACHE =================
+let cacheData: any = null;
+let cacheTime = 0;
+const CACHE_TTL = 10000; // 10 giây
+
+function clearCache() {
+  cacheData = null;
+  cacheTime = 0;
+}
+
+// ================= HELPER =================
 function findById(data: any[][], id: string, colIndex: number) {
   return data.slice(1).find(row => row[colIndex] === id);
 }
 
+// ================= API =================
 export default async function handler(req: any, res: any) {
   try {
     const { action } = req.query;
 
     // ================= GET =================
     if (req.method === 'GET') {
+
       if (action === 'getAll') {
+        const now = Date.now();
+
+        // 🔥 CACHE HIT
+        if (cacheData && (now - cacheTime < CACHE_TTL)) {
+          return res.status(200).json(cacheData);
+        }
+
+        // 🔥 LOAD DATA (PARALLEL)
         const [giaoDich, khachHang, nhaCungCap, hangHoa] = await Promise.all([
           readSheet('GIAO_DICH'),
           readSheet('KHACH_HANG'),
@@ -24,12 +44,18 @@ export default async function handler(req: any, res: any) {
           readSheet('HANG_HOA')
         ]);
 
-        return res.status(200).json({
+        const result = {
           giaoDich,
           khachHang,
           nhaCungCap,
           hangHoa
-        });
+        };
+
+        // 🔥 SAVE CACHE
+        cacheData = result;
+        cacheTime = now;
+
+        return res.status(200).json(result);
       }
 
       return res.status(400).json({
@@ -41,15 +67,14 @@ export default async function handler(req: any, res: any) {
     if (req.method === 'POST') {
       const { row, id } = req.body || {};
 
-      // =========================================
-      // 🔥 THÊM KHÁCH HÀNG
-      // =========================================
+      // ================= KHÁCH HÀNG =================
       if (action === 'addKhachHang') {
         if (!row || !Array.isArray(row)) {
           return res.status(400).json({ error: 'Dữ liệu KH không hợp lệ' });
         }
 
         await appendRow('KHACH_HANG', row);
+        clearCache();
 
         return res.status(200).json({
           success: true,
@@ -57,15 +82,14 @@ export default async function handler(req: any, res: any) {
         });
       }
 
-      // =========================================
-      // 🔥 THÊM NHÀ CUNG CẤP
-      // =========================================
+      // ================= NCC =================
       if (action === 'addNCC') {
         if (!row || !Array.isArray(row)) {
           return res.status(400).json({ error: 'Dữ liệu NCC không hợp lệ' });
         }
 
         await appendRow('NHA_CUNG_CAP', row);
+        clearCache();
 
         return res.status(200).json({
           success: true,
@@ -73,15 +97,14 @@ export default async function handler(req: any, res: any) {
         });
       }
 
-      // =========================================
-      // 🔥 THÊM HÀNG HÓA
-      // =========================================
+      // ================= HÀNG HÓA =================
       if (action === 'addHangHoa') {
         if (!row || !Array.isArray(row)) {
           return res.status(400).json({ error: 'Dữ liệu hàng hóa không hợp lệ' });
         }
 
         await appendRow('HANG_HOA', row);
+        clearCache();
 
         return res.status(200).json({
           success: true,
@@ -89,15 +112,14 @@ export default async function handler(req: any, res: any) {
         });
       }
 
-      // =========================================
-      // 🔥 UPDATE HÀNG HÓA (MỚI)
-      // =========================================
+      // ================= UPDATE HÀNG =================
       if (action === 'updateHangHoa') {
         if (!row || !Array.isArray(row)) {
           return res.status(400).json({ error: 'Dữ liệu update không hợp lệ' });
         }
 
         await updateRowById('HANG_HOA', row[0], 0, row);
+        clearCache();
 
         return res.status(200).json({
           success: true,
@@ -105,15 +127,14 @@ export default async function handler(req: any, res: any) {
         });
       }
 
-      // =========================================
-      // 🔥 DELETE HÀNG HÓA (MỚI)
-      // =========================================
+      // ================= DELETE HÀNG =================
       if (action === 'deleteHangHoa') {
         if (!id) {
           return res.status(400).json({ error: 'Thiếu ID xóa' });
         }
 
         await deleteRowById('HANG_HOA', id, 0);
+        clearCache();
 
         return res.status(200).json({
           success: true,
@@ -121,9 +142,7 @@ export default async function handler(req: any, res: any) {
         });
       }
 
-      // =========================================
-      // 🔥 THÊM GIAO DỊCH (GIỮ NGUYÊN LOGIC CỦA BẠN)
-      // =========================================
+      // ================= GIAO DỊCH =================
       if (action === 'addGiaoDich') {
         if (!row || !Array.isArray(row)) {
           return res.status(400).json({ error: 'Row không hợp lệ' });
@@ -140,10 +159,9 @@ export default async function handler(req: any, res: any) {
           readSheet('NHA_CUNG_CAP')
         ]);
 
-        // ================= KHÁCH HÀNG =================
+        // KHÁCH HÀNG
         if (type === 'BAN') {
           const exists = findById(khachHang, doiTacId, 0);
-
           if (!exists) {
             await appendRow('KHACH_HANG', [
               doiTacId,
@@ -154,10 +172,9 @@ export default async function handler(req: any, res: any) {
           }
         }
 
-        // ================= NHÀ CUNG CẤP =================
+        // NCC
         if (type === 'NHAP') {
           const exists = findById(nhaCungCap, doiTacId, 0);
-
           if (!exists) {
             await appendRow('NHA_CUNG_CAP', [
               doiTacId,
@@ -168,8 +185,8 @@ export default async function handler(req: any, res: any) {
           }
         }
 
-        // ================= GIAO DỊCH =================
         await appendRow('GIAO_DICH', row);
+        clearCache();
 
         return res.status(200).json({
           success: true,
